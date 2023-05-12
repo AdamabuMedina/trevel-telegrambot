@@ -1,12 +1,7 @@
-import telebot
-from config import TOKEN
+from loader import bot
+import handlers  # noqa
+from utils.set_bot_commands import set_default_commands
 
-bot = telebot.TeleBot(TOKEN)
-
-
-@bot.message_handler(commands=['hello-world'])
-@bot.message_handler(func=lambda message: message.text == 'Привет'.lower())
-def hello_message(message):
-    bot.reply_to(message, 'Привет, мир!')
-
-bot.polling()
+if __name__ == "__main__":
+    set_default_commands(bot)
+    bot.infinity_polling()
