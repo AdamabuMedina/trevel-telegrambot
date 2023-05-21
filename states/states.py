@@ -18,6 +18,18 @@ class LowPriceState(StatesGroup):
     start_date = State()
     end_date = State()
 
+class HighPriceStates(StatesGroup):
+    """
+    State класс для команды HighPrice
+    """
+    city = State()
+    cities = State()
+    count_hotels = State()
+    photo = State()
+    count_photo = State()
+    start_date = State()
+    end_date = State()
+
 
 bot.add_custom_filter(custom_filters.StateFilter(bot))
 bot.add_custom_filter(custom_filters.IsDigitFilter())

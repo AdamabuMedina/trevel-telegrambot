@@ -16,8 +16,8 @@ RAPID_API_KEY: str = os.getenv('RAPID_API_KEY')
 DEFAULT_COMMANDS: List[Tuple[str, str]] = [
     ('start', "Запустить бота"),
     ('help', "Вывести справку"),
-    ('lowprice', 'Поиск бюджетных отелей')
-    # ('highprice', 'Поиск лучших отелей'),
+    ('lowprice', 'Поиск бюджетных отелей'),
+    ('highprice', 'Поиск лучших отелей'),
     # ('bestdeal', 'Настройка поиска'),
     # ('history', 'История поиска')
 ]
