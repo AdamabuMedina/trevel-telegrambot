@@ -1,9 +1,8 @@
 from datetime import date
-from typing import Union, Optional
 
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
-from utils.logger import logger
 
+from utils.logger import logger
 from loader import bot
 from states.states import LowPriceState
 from keyboards.inline.bot_filters import for_search, for_button, for_photo, for_start
@@ -12,28 +11,16 @@ from keyboards.inline.photo_keyboard import create_photo_keyboard
 from utils.misc.hotel_search import get_properties_list
 from utils.misc.city_search_utils import get_dest_id
 from utils.misc.hotel_photo_utils import get_photo_hotel
+from handlers.custom_handlers.search_utils.start_search import start_search
 
 
 @bot.callback_query_handler(func=None, start_config=for_start.filter(action='lowprice'))
-def start_highprice(call: CallbackQuery) -> None:
-    """
-    Выбор возрастания цены
-    :param call: CallbackQuery
-    """
-    logger.info(' ')
-    bot.set_state(call.from_user.id, LowPriceState.cities, call.message.chat.id)
-    bot.send_message(call.message.chat.id, 'Отлично! Вы выбрали поиск недорогих отелей. Выберите город для поиска.')
-
+def start_lowprice(call):
+     start_search(call, LowPriceState.cities, call.message.chat.id, 'Отлично! Вы выбрали поиск недорогих отелей. Выберите город для поиска.')
 
 @bot.message_handler(commands=['lowprice'])
-def start_lowprice(message: Message) -> None:
-    """
-    Начало работы команды поиска дешёвых отелей
-    :param message: Message
-    """
-    logger.info(f'user_id {message.from_user.id}')
-    bot.set_state(message.from_user.id, LowPriceState.cities, message.chat.id)
-    bot.send_message(message.chat.id, 'Отлично! Вы выбрали поиск недорогих отелей. Выберите город для поиска.')
+def start_lowprice(message):
+    start_search(message, LowPriceState.cities, message.chat.id, 'Отлично! Вы выбрали поиск недорогих отелей. Выберите город для поиска.')
 
 
 @bot.message_handler(state=LowPriceState.cities)

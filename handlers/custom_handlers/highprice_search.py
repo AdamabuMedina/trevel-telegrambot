@@ -4,7 +4,7 @@ from telebot.types import InputMediaPhoto, Message, CallbackQuery
 
 from loader import bot
 from utils.logger import logger
-from states.states import HighPriceStates
+from states.states import HighPriceState
 from keyboards.inline.bot_filters import for_search, for_button, for_photo, for_start
 from keyboards.inline.calendar.inline_calendar import bot_get_keyboard_inline
 from keyboards.inline.photo_keyboard import create_photo_keyboard
@@ -16,17 +16,17 @@ from utils.misc.hotel_photo_utils import get_photo_hotel
 @bot.callback_query_handler(func=None, start_config=for_start.filter(action='highprice'))
 def start_highprice(call):
     logger.info(' ')
-    bot.set_state(call.from_user.id, HighPriceStates.cities, call.message.chat.id)
+    bot.set_state(call.from_user.id, HighPriceState.cities, call.message.chat.id)
     bot.send_message(call.message.chat.id, 'Отлично! Вы выбрали поиск топовых отелей. Выберите город для поиска.')
 
 @bot.message_handler(commands=['highprice'])
 def start_highprice(message: Message) -> None:
     logger.info(f'user_id {message.from_user.id}')
-    bot.set_state(message.from_user.id, HighPriceStates.cities, message.chat.id)
+    bot.set_state(message.from_user.id, HighPriceState.cities, message.chat.id)
     bot.send_message(message.chat.id, 'Отлично! Вы выбрали поиск топовых отелей. Выберите город для поиска.')
 
 
-@bot.message_handler(state=HighPriceStates.cities)
+@bot.message_handler(state=HighPriceState.cities)
 def get_cities_request(message: Message) -> None:
     logger.info(f'user_id {message.from_user.id}')
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
@@ -46,13 +46,13 @@ def get_cities_request(message: Message) -> None:
             logger.error(f'user_id {message.from_user.id}')
             bot.send_message(
                 message.chat.id, 'Нет подходящего варианта. Попробуйте еще раз.')
-            bot.set_state(message.from_user.id, HighPriceStates.cities)
+            bot.set_state(message.from_user.id, HighPriceState.cities)
 
 
 @bot.callback_query_handler(func=None, button_config=for_button.filter(state='High_state'))
 def button_callback(call: CallbackQuery) -> None:
     logger.info(f'user_id {call.from_user.id}')
-    bot.set_state(call.from_user.id, HighPriceStates.start_date, call.message.chat.id)
+    bot.set_state(call.from_user.id, HighPriceState.start_date, call.message.chat.id)
     callback_data = for_button.parse(callback_data=call.data)
     name, destid = callback_data['name'], int(callback_data['destid'])
     with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
@@ -71,7 +71,7 @@ def callback_start_date(call: CallbackQuery) -> None:
     data = for_search.parse(callback_data=call.data)
     my_exit_date = date(year=int(data['year']), month=int(data['month']), day=int(data['day']))
     bot.send_message(call.message.chat.id, 'Выберите дату уезда', reply_markup=bot_get_keyboard_inline(command='highprice', state='high_end_date'))
-    bot.set_state(call.from_user.id, HighPriceStates.end_date, call.message.chat.id)
+    bot.set_state(call.from_user.id, HighPriceState.end_date, call.message.chat.id)
     with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
         data['startday'] = my_exit_date
         logger.info(f'user_id {call.from_user.id, my_exit_date}')
@@ -83,7 +83,7 @@ def callback_end_date(call: CallbackQuery) -> None:
     logger.info(f'user_id {call.from_user.id}')
     data = for_search.parse(callback_data=call.data)
     my_exit_date = date(year=int(data['year']), month=int(data['month']), day=int(data['day']))
-    bot.set_state(call.from_user.id, HighPriceStates.count_hotels, call.message.chat.id)
+    bot.set_state(call.from_user.id, HighPriceState.count_hotels, call.message.chat.id)
     bot.send_message(call.message.chat.id, 'Сколько отелей выводить? (не более 10)')
     with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
         data['endday'] = my_exit_date
@@ -95,12 +95,12 @@ def callback_end_date(call: CallbackQuery) -> None:
         bot.edit_message_text(f'Дата выезда: {my_exit_date}', call.message.chat.id, call.message.id)
 
 
-@bot.message_handler(state=HighPriceStates.count_hotels, is_digit=True, count_digit=True)
+@bot.message_handler(state=HighPriceState.count_hotels, is_digit=True, count_digit=True)
 def get_photo_info(message: Message) -> None:
     logger.info(f'user_id {message.from_user.id}')
     bot.send_message(message.chat.id, f'Буду выводить {message.text} отелей')
     bot.send_message(message.chat.id, f'Нужны фото отелей?', reply_markup=create_photo_keyboard(state='High_state'))
-    bot.set_state(message.from_user.id, HighPriceStates.photo, message.chat.id)
+    bot.set_state(message.from_user.id, HighPriceState.photo, message.chat.id)
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
         data['count_hotels'] = message.text
 
@@ -118,12 +118,12 @@ def not_photo(call: CallbackQuery) -> None:
 def get_photo_count_info(call: CallbackQuery) -> None:
     logger.info(f'user_id {call.from_user.id}')
     bot.edit_message_text('Сколько фото выводить? (Не более 10)', call.message.chat.id, call.message.id)
-    bot.set_state(call.from_user.id, HighPriceStates.count_photo, call.message.chat.id)
+    bot.set_state(call.from_user.id, HighPriceState.count_photo, call.message.chat.id)
     with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
         data['photo'] = True
 
 
-@bot.message_handler(state=HighPriceStates.count_photo, is_digit=True, count_digit=True)
+@bot.message_handler(state=HighPriceState.count_photo, is_digit=True, count_digit=True)
 def get_photo_info(message: Message) -> None:
     logger.info(f'user_id {message.from_user.id, message.text}')
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
@@ -132,25 +132,25 @@ def get_photo_info(message: Message) -> None:
     user_is_ready(message)
 
 
-@bot.message_handler(state=HighPriceStates.count_hotels, is_digit=True, count_digit=False)
+@bot.message_handler(state=HighPriceState.count_hotels, is_digit=True, count_digit=False)
 def dont_check_count(message: Message) -> None:
     logger.error(f'user_id {message.from_user.id}')
     bot.send_message(message.chat.id, 'Введите число в диапазоне от 1 до 10')
 
 
-@bot.message_handler(state=HighPriceStates.count_hotels, is_digit=False)
+@bot.message_handler(state=HighPriceState.count_hotels, is_digit=False)
 def count_incorrect(message: Message) -> None:
     logger.error(f'user_id {message.from_user.id}')
     bot.send_message(message.chat.id, 'Введите количество в цифрах')
 
 
-@bot.message_handler(state=HighPriceStates.count_photo, is_digit=False)
+@bot.message_handler(state=HighPriceState.count_photo, is_digit=False)
 def count_incorrect(message: Message) -> None:
     logger.error(f'user_id {message.from_user.id}')
     bot.send_message(message.chat.id, 'Введите количество в цифрах')
 
 
-@bot.message_handler(state=HighPriceStates.count_photo, is_digit=True, count_digit=False)
+@bot.message_handler(state=HighPriceState.count_photo, is_digit=True, count_digit=False)
 def dont_check_count(message: Message) -> None:
     logger.error(f'user_id {message.from_user.id}')
     bot.send_message(message.chat.id, 'Введите число в диапазоне от 1 до 10')
