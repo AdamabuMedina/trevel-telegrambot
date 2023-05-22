@@ -1,9 +1,8 @@
 from datetime import date
-from typing import Union, Optional
-
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
-from utils.logger import logger
+from handlers.custom_handlers.search_utils.get_cities_request import get_cities_request
 
+from utils.logger import logger
 from loader import bot
 from states.states import BestDealState
 from keyboards.inline.bot_filters import for_search, for_button, for_photo, for_start
@@ -12,56 +11,21 @@ from keyboards.inline.photo_keyboard import create_photo_keyboard
 from utils.misc.hotel_search import get_properties_list
 from utils.misc.city_search_utils import get_dest_id
 from utils.misc.hotel_photo_utils import get_photo_hotel
-
-
+from handlers.custom_handlers.search_utils.start_search import start_search
 
 
 @bot.callback_query_handler(func=None, start_config=for_start.filter(action='bestdeal'))
-def start_highprice(call):
-    """
-    Выбор возрастания цены
-    :param call:
-    :return:
-    """
-    logger.info(' ')
-    bot.set_state(call.from_user.id, BestDealState.cities,call.message.chat.id)
-    bot.send_message(call.message.chat.id, 'Отлично! Выбран дополнительный критерий поиска. Выберите город для поиска.')
-
+def start_bestdeal(call):
+    start_search(call, BestDealState.cities, call.message.chat.id, 'Отлично! Выбран дополнительный критерий поиска. Выберите город для поиска.')
 
 @bot.message_handler(commands=['bestdeal'])
-def start_best_deal(message: Message) -> None:
-    """
-    Начала работы команды bestdeal
-    :return: None
-    """
-    logger.info(f'user_id {message.from_user.id}')
-    bot.set_state(message.from_user.id, BestDealState.cities, message.chat.id)
-    bot.send_message(message.chat.id, 'Отлично! Выбран дополнительный критерий поиска. Выберите город для поиска.')
+def start_bestdeal(message):
+    start_search(message, BestDealState.cities, message.chat.id, 'Отлично! Выбран дополнительный критерий поиска. Выберите город для поиска.')
 
 
 @bot.message_handler(state=BestDealState.cities)
-def get_cities_request(message: Message) -> None:
-    """
-    Вывод кнопок городов и их обработка
-    :param message: город пользователя
-    :return: None
-    """
-    logger.info(f'user_id {message.from_user.id}')
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        data['id'] = message.from_user.id
-        data['SortOrder'] = 'STAR_RATING_HIGHEST_FIRST'
-        data['locale'] = 'ru_RU'
-        data['currency'] = 'USD'
-        data['city'] = message.text
-        keyboard = get_dest_id(message.text, data['locale'], data['currency'], state='best_state')
-        if not isinstance(keyboard, str):
-            logger.info(f'user_id {message.from_user.id} {message.text}')
-            bot.send_message(message.chat.id, 'Выберите подходящий город:', reply_markup=keyboard)
-        else:
-            logger.error(f'user_id {message.from_user.id}')
-            bot.send_message(message.chat.id, 'Нет подходящего варианта попробуйте еще раз')
-            bot.set_state(message.from_user.id, BestDealState.cities)
-
+def start_highprice(message):
+    get_cities_request(message, 'PRICE', BestDealState.cities)
 
 @bot.callback_query_handler(func=None, button_config=for_button.filter(state='best_state'))
 def button_callback(call: CallbackQuery) -> None:
@@ -144,7 +108,7 @@ def not_photo(call: CallbackQuery) -> None:
     :return: None
     """
     logger.info(f'user_id {call.from_user.id}')
-    bot.edit_message_text(f'Введите минимальную цену за ночь', call.message.chat.id, call.message.id)
+    bot.edit_message_text(f'Введите минимальную цену за ночь в $', call.message.chat.id, call.message.id)
     bot.set_state(call.from_user.id, BestDealState.min_price, call.message.chat.id)
     with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
         logger.info(f'user_id {call.from_user.id}')
@@ -174,7 +138,7 @@ def get_photo_info(message: Message) -> None:
     :return: None
     """
     logger.info(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, f'Введите минимальную цену за ночь')
+    bot.send_message(message.chat.id, f'Введите минимальную цену за ночь в $')
     bot.set_state(message.from_user.id, BestDealState.min_price, message.chat.id)
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
         logger.info(f'user_id {message.from_user.id} {message.text}')
@@ -189,7 +153,7 @@ def get_min_price(message: Message) -> None:
     :return: None
     """
     logger.info(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, f'Введите максимальную цену за ночь')
+    bot.send_message(message.chat.id, f'Введите максимальную цену за ночь в $')
     bot.set_state(message.from_user.id, BestDealState.max_price, message.chat.id)
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
         logger.info(f'user_id {message.from_user.id} {message.text}')
@@ -203,7 +167,7 @@ def get_max_price(message: Message) -> None:
     :param message: max_price
     :return: None
     """
-    bot.send_message(message.chat.id, f'Введите расстояние до центра')
+    bot.send_message(message.chat.id, f'Введите расстояние до центра в км')
     bot.set_state(message.from_user.id, BestDealState.distance, message.chat.id)
     logger.info(f'user_id {message.from_user.id}')
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:

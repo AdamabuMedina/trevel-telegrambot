@@ -1,6 +1,7 @@
 from datetime import date
 
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
+from handlers.custom_handlers.search_utils.get_cities_request import get_cities_request
 
 from utils.logger import logger
 from loader import bot
@@ -24,27 +25,8 @@ def start_lowprice(message):
 
 
 @bot.message_handler(state=LowPriceState.cities)
-def get_cities_request(message: Message) -> None:
-    """
-    Вывод кнопок городов и их обработка
-    :param message: Message
-    """
-    logger.info(f'user_id {message.from_user.id}')
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        data['id'] = message.from_user.id
-        data['SortOrder'] = 'PRICE'
-        data['locale'] = 'ru_RU'
-        data['currency'] = 'USD'
-        data['city'] = message.text
-        logger.info(f'user_id {message.from_user.id}')
-        keyboard = get_dest_id(message.text, data['locale'], data['currency'], state='low_city')
-        if keyboard and keyboard.keyboard:  # Check if keyboard is not None and has the keyboard attribute
-            logger.info(f'user_id {message.from_user.id} {message.text}')
-            bot.send_message(message.chat.id, 'Выберите подходящий город:', reply_markup=keyboard)
-        else:
-            logger.error(f'user_id {message.from_user.id}')
-            bot.send_message(message.chat.id, 'Нет подходящего варианта, попробуйте еще раз')
-            bot.set_state(message.from_user.id, LowPriceState.cities)
+def start_highprice(message):
+    get_cities_request(message, 'PRICE', LowPriceState.cities)
 
 
 @bot.callback_query_handler(func=None, button_config=for_button.filter(state='low_city'))

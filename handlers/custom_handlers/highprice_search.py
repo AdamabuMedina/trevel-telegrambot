@@ -1,6 +1,6 @@
 from datetime import date
-
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
+from handlers.custom_handlers.search_utils.get_cities_request import get_cities_request
 
 from loader import bot
 from utils.logger import logger
@@ -11,42 +11,22 @@ from keyboards.inline.photo_keyboard import create_photo_keyboard
 from utils.misc.hotel_search import get_properties_list
 from utils.misc.city_search_utils import get_dest_id
 from utils.misc.hotel_photo_utils import get_photo_hotel
+from handlers.custom_handlers.search_utils.start_search import start_search
 
 
 @bot.callback_query_handler(func=None, start_config=for_start.filter(action='highprice'))
 def start_highprice(call):
-    logger.info(' ')
-    bot.set_state(call.from_user.id, HighPriceState.cities, call.message.chat.id)
-    bot.send_message(call.message.chat.id, 'Отлично! Вы выбрали поиск топовых отелей. Выберите город для поиска.')
+    start_search(call, HighPriceState.cities, call.message.chat.id, 'Отлично! Вы выбрали поиск топовых отелей. Выберите город для поиска.')
 
 @bot.message_handler(commands=['highprice'])
-def start_highprice(message: Message) -> None:
-    logger.info(f'user_id {message.from_user.id}')
-    bot.set_state(message.from_user.id, HighPriceState.cities, message.chat.id)
-    bot.send_message(message.chat.id, 'Отлично! Вы выбрали поиск топовых отелей. Выберите город для поиска.')
+def start_highprice(message):
+    start_search(message, HighPriceState.cities, message.chat.id, 'Отлично! Вы выбрали поиск топовых отелей. Выберите город для поиска.')
 
 
 @bot.message_handler(state=HighPriceState.cities)
-def get_cities_request(message: Message) -> None:
-    logger.info(f'user_id {message.from_user.id}')
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        data['id'] = message.from_user.id
-        data['SortOrder'] = 'PRICE_HIGHEST_FIRST'
-        data['locale'] = 'ru_RU'
-        data['currency'] = 'USD'
-        data['city'] = message.text
-        logger.info(f'user_id {message.from_user.id}')
-        keyboard = get_dest_id(
-            message.text, data['locale'], data['currency'], state='High_state')
-        if keyboard.keyboard:
-            logger.info(f'user_id {message.from_user.id} {message.text}')
-            bot.send_message(
-                message.chat.id, 'Выберите подходящий город:', reply_markup=keyboard)
-        else:
-            logger.error(f'user_id {message.from_user.id}')
-            bot.send_message(
-                message.chat.id, 'Нет подходящего варианта. Попробуйте еще раз.')
-            bot.set_state(message.from_user.id, HighPriceState.cities)
+def start_highprice(message):
+    get_cities_request(message, 'PRICE_HIGHEST_FIRST', HighPriceState.cities)
+
 
 
 @bot.callback_query_handler(func=None, button_config=for_button.filter(state='High_state'))
