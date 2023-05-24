@@ -17,6 +17,7 @@ class LowPriceState(StatesGroup):
     count_photo = State()
     start_date = State()
     end_date = State()
+    name = "low"
 
 class HighPriceState(StatesGroup):
     """
@@ -29,6 +30,7 @@ class HighPriceState(StatesGroup):
     count_photo = State()
     start_date = State()
     end_date = State()
+    name = "high"
 
 
 class BestDealState(StatesGroup):
@@ -45,6 +47,7 @@ class BestDealState(StatesGroup):
     min_price = State()
     max_price = State()
     distance = State()
+    name = "dest"
 
 bot.add_custom_filter(custom_filters.StateFilter(bot))
 bot.add_custom_filter(custom_filters.IsDigitFilter())

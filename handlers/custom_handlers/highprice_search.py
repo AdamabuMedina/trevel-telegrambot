@@ -1,6 +1,6 @@
 from datetime import date
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
-from handlers.custom_handlers.search_utils.button_callback import button_callback
+from handlers.custom_handlers.search_utils.button_callback import button_callback, callback_end_date, callback_start_date
 from handlers.custom_handlers.search_utils.get_cities_request import get_cities_request
 
 from loader import bot
@@ -15,52 +15,32 @@ from handlers.custom_handlers.search_utils.start_search import start_search
 
 
 @bot.callback_query_handler(func=None, start_config=for_start.filter(action='highprice'))
-def start_highprice(call):
+def start_highprice(call: CallbackQuery):
     start_search(call, HighPriceState.cities, call.message.chat.id, 'Отлично! Вы выбрали поиск топовых отелей. Выберите город для поиска.')
 
 @bot.message_handler(commands=['highprice'])
-def start_highprice(message):
+def start_highprice(message: Message):
     start_search(message, HighPriceState.cities, message.chat.id, 'Отлично! Вы выбрали поиск топовых отелей. Выберите город для поиска.')
 
 
 @bot.message_handler(state=HighPriceState.cities)
-def start_highprice(message):
-    get_cities_request(message, 'PRICE_HIGHEST_FIRST', HighPriceState.cities)
+def start_highprice(message: Message):
+    get_cities_request(message, 'PRICE_HIGHEST_FIRST', HighPriceState.cities, "High_state")
 
 
 @bot.callback_query_handler(func=None, button_config=for_button.filter(state='High_state'))
-def highprice_button_callback(call):
+def highprice_button_callback(call: CallbackQuery):
     button_callback(call, HighPriceState, 'highprice')
 
 
 @bot.callback_query_handler(func=None, search_config=for_search.filter(state='high_start_date'))
-def callback_start_date(call: CallbackQuery) -> None:
-    logger.info(f'user_id {call.from_user.id}')
-    data = for_search.parse(callback_data=call.data)
-    my_exit_date = date(year=int(data['year']), month=int(data['month']), day=int(data['day']))
-    bot.send_message(call.message.chat.id, 'Выберите дату уезда', reply_markup=bot_get_keyboard_inline(command='highprice', state='high_end_date'))
-    bot.set_state(call.from_user.id, HighPriceState.end_date, call.message.chat.id)
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        data['startday'] = my_exit_date
-        logger.info(f'user_id {call.from_user.id, my_exit_date}')
-        bot.edit_message_text(f'Дата заезда: {my_exit_date}', call.message.chat.id, call.message.id)
+def highprice_callback_start_date(call):
+    callback_start_date(call, HighPriceState, 'highprice')
 
 
 @bot.callback_query_handler(func=None, search_config=for_search.filter(state='high_end_date'))
-def callback_end_date(call: CallbackQuery) -> None:
-    logger.info(f'user_id {call.from_user.id}')
-    data = for_search.parse(callback_data=call.data)
-    my_exit_date = date(year=int(data['year']), month=int(data['month']), day=int(data['day']))
-    bot.set_state(call.from_user.id, HighPriceState.count_hotels, call.message.chat.id)
-    bot.send_message(call.message.chat.id, 'Сколько отелей выводить? (не более 10)')
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        data['endday'] = my_exit_date
-        data['all_days'] = data['endday'] - data['startday']
-        logger.info(f'user_id {call.from_user.id} {my_exit_date}')
-        if data['startday'] > data['endday']:
-            logger.error(f'user_id {call.from_user.id}')
-            data['startday'], data['endday'] = data['endday'], data['startday']
-        bot.edit_message_text(f'Дата выезда: {my_exit_date}', call.message.chat.id, call.message.id)
+def highprice_callback_end_date(call):
+    callback_end_date(call, HighPriceState)
 
 
 @bot.message_handler(state=HighPriceState.count_hotels, is_digit=True, count_digit=True)

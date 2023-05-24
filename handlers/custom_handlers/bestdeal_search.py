@@ -1,6 +1,6 @@
 from datetime import date
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
-from handlers.custom_handlers.search_utils.button_callback import button_callback
+from handlers.custom_handlers.search_utils.button_callback import button_callback, callback_end_date, callback_start_date
 from handlers.custom_handlers.search_utils.get_cities_request import get_cities_request
 
 from utils.logger import logger
@@ -25,7 +25,7 @@ def start_bestdeal(message):
 
 @bot.message_handler(state=BestDealState.cities)
 def start_highprice(message):
-    get_cities_request(message, 'PRICE', BestDealState.cities)
+    get_cities_request(message, 'STAR_RATING_HIGHEST_FIRST', BestDealState.cities, 'best_state')
 
 @bot.callback_query_handler(func=None, button_config=for_button.filter(state='best_state'))
 def bestdeal_button_callback(call):
@@ -33,40 +33,14 @@ def bestdeal_button_callback(call):
 
 
 @bot.callback_query_handler(func=None, search_config=for_search.filter(state='dest_start_date'))
-def callback_start_date(call: CallbackQuery) -> None:
-    """
-    :param call: Выбор пользователя начала поездки
-    """
-    logger.info(f'user_id {call.from_user.id}')
-    bot.set_state(call.from_user.id, BestDealState.end_date, call.message.chat.id)
-    data = for_search.parse(callback_data=call.data)
-    my_exit_date = date(year=int(data['year']), month=int(data['month']), day=int(data['day']))
-    bot.send_message(call.message.chat.id, 'Выберите дату уезда',
-                     reply_markup=bot_get_keyboard_inline(command='lowprice', state='dest_end_date'))
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        logger.info(f'user_id {call.from_user.id} {my_exit_date}')
-        data['startday'] = my_exit_date
-        bot.edit_message_text(f'Дата заезда: {my_exit_date}', call.message.chat.id, call.message.id)
+def bestdeal_callback_start_date(call):
+    callback_start_date(call, BestDealState, 'lowprice')
 
 
 @bot.callback_query_handler(func=None, search_config=for_search.filter(state='dest_end_date'))
-def callback_end_date(call: CallbackQuery) -> None:
-    """
-    :param call: Окончание поездки
-    """
-    logger.info(f'user_id {call.from_user.id}')
-    data = for_search.parse(callback_data=call.data)
-    my_exit_date = date(year=int(data['year']), month=int(data['month']), day=int(data['day']))
-    bot.set_state(call.from_user.id, BestDealState.count_hotels, call.message.chat.id)
-    bot.send_message(call.message.chat.id, 'Сколько отелей выводить? ( не более 10)')
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        logger.info(f'user_id {call.from_user.id} {my_exit_date}')
-        data['endday'] = my_exit_date
-        data['all_days'] = data['endday'] - data['startday']
-        if data['startday'] > data['endday']:
-            logger.error(f'user_id {call.from_user.id} перепутал даты, но всё исправили')
-            data['startday'], data['endday'] = data['endday'], data['startday']
-        bot.edit_message_text(f'Дата выезда: {my_exit_date}', call.message.chat.id, call.message.id)
+def bestdeal_callback_end_date(call):
+    callback_end_date(call, BestDealState)
+
 
 
 @bot.message_handler(state=BestDealState.count_hotels, is_digit=True, count_digit=True, )
@@ -93,7 +67,7 @@ def not_photo(call: CallbackQuery) -> None:
     :return: None
     """
     logger.info(f'user_id {call.from_user.id}')
-    bot.edit_message_text(f'Введите минимальную цену за ночь в $', call.message.chat.id, call.message.id)
+    bot.edit_message_text(f'Введите минимальную цену за ночь', call.message.chat.id, call.message.id)
     bot.set_state(call.from_user.id, BestDealState.min_price, call.message.chat.id)
     with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
         logger.info(f'user_id {call.from_user.id}')
@@ -123,7 +97,7 @@ def get_photo_info(message: Message) -> None:
     :return: None
     """
     logger.info(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, f'Введите минимальную цену за ночь в $')
+    bot.send_message(message.chat.id, f'Введите минимальную цену за ночь')
     bot.set_state(message.from_user.id, BestDealState.min_price, message.chat.id)
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
         logger.info(f'user_id {message.from_user.id} {message.text}')
@@ -138,7 +112,7 @@ def get_min_price(message: Message) -> None:
     :return: None
     """
     logger.info(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, f'Введите максимальную цену за ночь в $')
+    bot.send_message(message.chat.id, f'Введите максимальную цену за ночь')
     bot.set_state(message.from_user.id, BestDealState.max_price, message.chat.id)
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
         logger.info(f'user_id {message.from_user.id} {message.text}')
@@ -152,7 +126,7 @@ def get_max_price(message: Message) -> None:
     :param message: max_price
     :return: None
     """
-    bot.send_message(message.chat.id, f'Введите расстояние до центра в км')
+    bot.send_message(message.chat.id, f'Введите расстояние до центра')
     bot.set_state(message.from_user.id, BestDealState.distance, message.chat.id)
     logger.info(f'user_id {message.from_user.id}')
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:

@@ -1,7 +1,7 @@
 from datetime import date
 
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
-from handlers.custom_handlers.search_utils.button_callback import button_callback
+from handlers.custom_handlers.search_utils.button_callback import button_callback, callback_end_date, callback_start_date
 from handlers.custom_handlers.search_utils.get_cities_request import get_cities_request
 
 from utils.logger import logger
@@ -26,7 +26,7 @@ def start_lowprice(message):
 
 @bot.message_handler(state=LowPriceState.cities)
 def start_highprice(message):
-    get_cities_request(message, 'PRICE', LowPriceState.cities)
+    get_cities_request(message, 'PRICE', LowPriceState.cities, "low_city")
 
 
 @bot.callback_query_handler(func=None, button_config=for_button.filter(state='low_city'))
@@ -35,40 +35,13 @@ def lowprice_button_callback(call):
 
 
 @bot.callback_query_handler(func=None, search_config=for_search.filter(state='low_start_date'))
-def callback_start_date(call: CallbackQuery) -> None:
-    """
-    :param call: Выбор пользователя начала поездки
-    """
-    logger.info(f'user_id {call.from_user.id}')
-    bot.set_state(call.from_user.id, LowPriceState.end_date, call.message.chat.id)
-    data = for_search.parse(callback_data=call.data)
-    my_exit_date = date(year=int(data['year']), month=int(data['month']), day=int(data['day']))
-    bot.send_message(call.message.chat.id, 'Выберите дату уезда',
-                     reply_markup=bot_get_keyboard_inline(command='lowprice', state='low_end_date'))
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        data['startday'] = my_exit_date
-        logger.info(f'user_id {call.from_user.id, my_exit_date}')
-        bot.edit_message_text(f'Дата заезда: {my_exit_date}', call.message.chat.id, call.message.id)
+def lowprice_callback_start_date(call):
+    callback_start_date(call, LowPriceState, "lowprice")
 
 
 @bot.callback_query_handler(func=None, search_config=for_search.filter(state='low_end_date'))
-def callback_end_date(call: CallbackQuery) -> None:
-    """
-    :param call: Окончание поездки
-    """
-    logger.info(f'user_id {call.from_user.id}')
-    data = for_search.parse(callback_data=call.data)
-    my_exit_date = date(year=int(data['year']), month=int(data['month']), day=int(data['day']))
-    bot.set_state(call.from_user.id, LowPriceState.count_hotels, call.message.chat.id)
-    bot.send_message(call.message.chat.id, 'Сколько отелей выводить? ( не более 10)')
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        data['endday'] = my_exit_date
-        data['all_days'] = data['endday'] - data['startday']
-        logger.info(f'user_id {call.from_user.id, my_exit_date}')
-        if data['startday'] > data['endday']:
-            logger.error(f'user_id {call.from_user.id}')
-            data['startday'], data['endday'] = data['endday'], data['startday']
-        bot.edit_message_text(f'Дата выезда: {my_exit_date}', call.message.chat.id, call.message.id)
+def lowprice_callback_end_date(call):
+    callback_end_date(call, LowPriceState)
 
 
 @bot.message_handler(state=LowPriceState.count_hotels, is_digit=True, count_digit=True, )
