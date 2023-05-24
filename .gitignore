@@ -129,5 +129,5 @@ dmypy.json
 .pyre/
 .idea/*
 .env
-.user.db
-.history_user.db
+user.db
+history_user.db

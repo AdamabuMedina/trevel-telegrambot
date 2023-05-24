@@ -1,15 +1,12 @@
-from datetime import date
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
 from handlers.custom_handlers.search_utils.button_callback import button_callback, callback_end_date, callback_start_date
 from handlers.custom_handlers.search_utils.get_cities_request import get_cities_request
-from handlers.custom_handlers.search_utils.handle_info import get_count_info, handle_photo_info, not_photo
+from handlers.custom_handlers.search_utils.handle_info import get_count_info, handle_invalid_input, process_photo_info, handle_photo_info, not_photo
 
 from utils.logger import logger
 from loader import bot
 from states.states import BestDealState
 from keyboards.inline.bot_filters import for_search, for_button, for_photo, for_start
-from keyboards.inline.calendar.inline_calendar import bot_get_keyboard_inline
-from keyboards.inline.photo_keyboard import create_photo_keyboard
 from utils.misc.hotel_search import get_properties_list
 from utils.misc.hotel_photo_utils import get_photo_hotel
 from handlers.custom_handlers.search_utils.start_search import start_search
@@ -60,19 +57,8 @@ def bestdeal_get_count_info(call: CallbackQuery) -> None:
 
 
 @bot.message_handler(state=BestDealState.count_photo, is_digit=True, count_digit=True)
-def get_photo_info(message: Message) -> None:
-    """
-    Запись количества фото отелей. Здесь нужно вызывать функцию обработки
-     информации(в которой будет отправка сообщения в чат с результатами)
-    :param message:количества фото отелей
-    :return: None
-    """
-    logger.info(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, f'Введите минимальную цену за ночь')
-    bot.set_state(message.from_user.id, BestDealState.min_price, message.chat.id)
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        logger.info(f'user_id {message.from_user.id} {message.text}')
-        data['count_photo'] = message.text
+def bestdeal_get_photo_info(message: Message) -> None:
+    process_photo_info(message, state=BestDealState)
 
 
 @bot.message_handler(state=BestDealState.min_price, is_digit=True)
@@ -125,23 +111,12 @@ def get_distance_to_centre(message: Message) -> None:
 
 @bot.message_handler(state=[BestDealState.distance, BestDealState.max_price, BestDealState.min_price],
                      is_digit=False)
-def not_digit_message(message: Message) -> None:
-    """
-    Обработчик ошибки при вводе не int
-    :return: None
-    """
-    logger.error(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, 'Введите число больше 0!')
-
+def handle_invalid_input_message(message: Message) -> None:
+    handle_invalid_input(message, 'Введите число больше 0!')
 
 @bot.message_handler(state=BestDealState.count_hotels, is_digit=True, count_digit=False)
-def dont_check_count(message: Message) -> None:
-    """
-    Ввели числа не в диапазоне
-    :return:None
-    """
-    logger.error(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, 'Введите число в диапазоне от 1 до 10')
+def handle_invalid_count(message: Message) -> None:
+    handle_invalid_input(message, 'Введите число в диапазоне от 1 до 10')
 
 
 def user_is_ready(message: Message) -> None:
@@ -179,30 +154,3 @@ def user_is_ready(message: Message) -> None:
             logger.error(f'user_id {message.from_user.id} {ex_str}')
             bot.send_message(message.chat.id, f'{ex_str}')
     bot.delete_state(message.from_user.id, message.chat.id)
-
-
-@bot.message_handler(state=BestDealState.count_hotels, is_digit=False)
-def count_incorrect(message: Message) -> None:
-    """
-    Ввел не цифру
-    """
-    logger.error(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, 'Введите количество в цифрах')
-
-
-@bot.message_handler(state=BestDealState.count_photo, is_digit=False)
-def count_incorrect(message: Message) -> None:
-    """
-    Ввел не цифру
-    """
-    logger.error(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, 'Введите количество в цифрах')
-
-
-@bot.message_handler(state=BestDealState.count_photo, is_digit=True, count_digit=False)
-def dont_check_count(message: Message) -> None:
-    """
-    Ввели числа не в диапазоне
-    """
-    logger.error(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, 'Введите число в диапазоне от 1 до 10')

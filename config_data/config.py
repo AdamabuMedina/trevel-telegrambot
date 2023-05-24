@@ -18,8 +18,8 @@ DEFAULT_COMMANDS: List[Tuple[str, str]] = [
     ('help', "Вывести справку"),
     ('lowprice', 'Поиск бюджетных отелей'),
     ('highprice', 'Поиск лучших отелей'),
-    ('bestdeal', 'Настройка поиска')
-    # ('history', 'История поиска')
+    ('bestdeal', 'Настройка поиска'),
+    ('history', 'История поиска')
 ]
 
 url_from_cities: str = "https://hotels4.p.rapidapi.com/locations/v2/search"

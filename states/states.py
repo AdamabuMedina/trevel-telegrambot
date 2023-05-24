@@ -49,5 +49,12 @@ class BestDealState(StatesGroup):
     distance = State()
     name = "dest"
 
+
+class HistoryState(StatesGroup):
+    """
+    State класс для команды history
+    """
+    count = State()
+
 bot.add_custom_filter(custom_filters.StateFilter(bot))
 bot.add_custom_filter(custom_filters.IsDigitFilter())

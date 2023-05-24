@@ -1,7 +1,7 @@
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
 from handlers.custom_handlers.search_utils.button_callback import button_callback, callback_end_date, callback_start_date
 from handlers.custom_handlers.search_utils.get_cities_request import get_cities_request
-from handlers.custom_handlers.search_utils.handle_info import get_count_info, handle_photo_info, not_photo
+from handlers.custom_handlers.search_utils.handle_info import get_count_info, handle_invalid_input, process_photo_info, handle_photo_info, not_photo
 
 from utils.logger import logger
 from loader import bot
@@ -57,54 +57,30 @@ def lowprice_get_count_info(call: CallbackQuery) -> None:
 
 
 @bot.message_handler(state=LowPriceState.count_photo, is_digit=True, count_digit=True)
-def get_photo_info(message: Message) -> None:
-    """
-    Запись количества фото отелей. Здесь нужно вызывать функцию обработки
-     информации(в которой будет отправка сообщения в чат с результатами)
-    """
-    logger.info(f'user_id {message.from_user.id, message.text}')
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        data['count_photo'] = message.text
-        bot.send_message(message.chat.id, 'Вывожу отели...')
-    user_is_ready(message)
+def lowprice_get_photo_info(message: Message) -> None:
+    process_photo_info(message, user_is_ready)
 
 
-@bot.message_handler(state=LowPriceState.count_hotels, is_digit=True, count_digit=False)
-def dont_check_count(message: Message) -> None:
-    """
-    Ввели числа не в диапазоне
-    :param message:
-    :return:
-    """
-    logger.error(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, 'Введите число в диапазоне от 1 до 10')
+@bot.message_handler(state=LowPriceState.count_photo, is_digit=True, count_digit=True)
+def highprice_get_photo_info(message: Message) -> None:
+    process_photo_info(message, user_is_ready)
 
+
+@bot.message_handler(state=LowPriceState.count_hotels)
+def handle_high_price_count_hotels(message: Message) -> None:
+    handle_invalid_input(message, is_digit=True, is_count=False)
+
+@bot.message_handler(state=LowPriceState.count_photo)
+def handle_high_price_count_photo(message: Message) -> None:
+    handle_invalid_input(message, is_digit=True, is_count=False)
 
 @bot.message_handler(state=LowPriceState.count_hotels, is_digit=False)
-def count_incorrect(message: Message) -> None:
-    """
-    Ввел не цифру
-    """
-    logger.error(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, 'Введите количество в цифрах')
-
+def handle_high_price_count_hotels_format(message: Message) -> None:
+    handle_invalid_input(message, is_digit=False, is_count=True)
 
 @bot.message_handler(state=LowPriceState.count_photo, is_digit=False)
-def count_incorrect(message: Message) -> None:
-    """
-    Ввел не цифру
-    """
-    logger.error(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, 'Введите количество в цифрах')
-
-
-@bot.message_handler(state=LowPriceState.count_photo, is_digit=True, count_digit=False)
-def dont_check_count(message: Message) -> None:
-    """
-    Ввели числа не в диапазоне
-    """
-    logger.error(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, 'Введите число в диапазоне от 1 до 10')
+def handle_high_price_count_photo_format(message: Message) -> None:
+    handle_invalid_input(message, is_digit=False, is_count=True)
 
 
 def user_is_ready(message: Message, user_id=None, chat_id=None) -> None:
