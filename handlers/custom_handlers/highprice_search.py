@@ -1,14 +1,12 @@
-from datetime import date
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
 from handlers.custom_handlers.search_utils.button_callback import button_callback, callback_end_date, callback_start_date
 from handlers.custom_handlers.search_utils.get_cities_request import get_cities_request
+from handlers.custom_handlers.search_utils.handle_info import get_count_info, handle_photo_info, not_photo
 
 from loader import bot
 from utils.logger import logger
 from states.states import HighPriceState
 from keyboards.inline.bot_filters import for_search, for_button, for_photo, for_start
-from keyboards.inline.calendar.inline_calendar import bot_get_keyboard_inline
-from keyboards.inline.photo_keyboard import create_photo_keyboard
 from utils.misc.hotel_search import get_properties_list
 from utils.misc.hotel_photo_utils import get_photo_hotel
 from handlers.custom_handlers.search_utils.start_search import start_search
@@ -44,31 +42,18 @@ def highprice_callback_end_date(call):
 
 
 @bot.message_handler(state=HighPriceState.count_hotels, is_digit=True, count_digit=True)
-def get_photo_info(message: Message) -> None:
-    logger.info(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, f'Буду выводить {message.text} отелей')
-    bot.send_message(message.chat.id, f'Нужны фото отелей?', reply_markup=create_photo_keyboard(state='High_state'))
-    bot.set_state(message.from_user.id, HighPriceState.photo, message.chat.id)
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        data['count_hotels'] = message.text
+def highprice_get_info(message: Message) -> None:
+    handle_photo_info(message, HighPriceState, "High_state")
 
 
 @bot.callback_query_handler(func=None, is_photo=for_photo.filter(photo='False', state='High_state'))
-def not_photo(call: CallbackQuery) -> None:
-    logger.info(f'user_id {call.from_user.id}')
-    bot.edit_message_text(f'Вывожу результаты', call.message.chat.id, call.message.id)
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        data['photo'] = ''
-    user_is_ready(call.message, call.from_user.id, call.message.chat.id)
+def highprice_not_photo(call: CallbackQuery) -> None:
+    not_photo(call, func=user_is_ready)
 
 
 @bot.callback_query_handler(func=None, is_photo=for_photo.filter(photo='True', state='High_state'))
-def get_photo_count_info(call: CallbackQuery) -> None:
-    logger.info(f'user_id {call.from_user.id}')
-    bot.edit_message_text('Сколько фото выводить? (Не более 10)', call.message.chat.id, call.message.id)
-    bot.set_state(call.from_user.id, HighPriceState.count_photo, call.message.chat.id)
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        data['photo'] = True
+def highprice_get_count_info(call: CallbackQuery) -> None:
+    get_count_info(call, HighPriceState)
 
 
 @bot.message_handler(state=HighPriceState.count_photo, is_digit=True, count_digit=True)

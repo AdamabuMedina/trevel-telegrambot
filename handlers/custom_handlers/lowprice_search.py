@@ -1,82 +1,59 @@
-from datetime import date
-
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
 from handlers.custom_handlers.search_utils.button_callback import button_callback, callback_end_date, callback_start_date
 from handlers.custom_handlers.search_utils.get_cities_request import get_cities_request
+from handlers.custom_handlers.search_utils.handle_info import get_count_info, handle_photo_info, not_photo
 
 from utils.logger import logger
 from loader import bot
 from states.states import LowPriceState
 from keyboards.inline.bot_filters import for_search, for_button, for_photo, for_start
-from keyboards.inline.calendar.inline_calendar import bot_get_keyboard_inline
-from keyboards.inline.photo_keyboard import create_photo_keyboard
 from utils.misc.hotel_search import get_properties_list
 from utils.misc.hotel_photo_utils import get_photo_hotel
 from handlers.custom_handlers.search_utils.start_search import start_search
 
 
 @bot.callback_query_handler(func=None, start_config=for_start.filter(action='lowprice'))
-def start_lowprice(call):
+def start_lowprice(call: CallbackQuery) -> None:
      start_search(call, LowPriceState.cities, call.message.chat.id, 'Отлично! Вы выбрали поиск недорогих отелей. Выберите город для поиска.')
 
 @bot.message_handler(commands=['lowprice'])
-def start_lowprice(message):
+def start_lowprice(message: Message) -> None:
     start_search(message, LowPriceState.cities, message.chat.id, 'Отлично! Вы выбрали поиск недорогих отелей. Выберите город для поиска.')
 
 
 @bot.message_handler(state=LowPriceState.cities)
-def start_highprice(message):
+def start_highprice(message: Message) -> None:
     get_cities_request(message, 'PRICE', LowPriceState.cities, "low_city")
 
 
 @bot.callback_query_handler(func=None, button_config=for_button.filter(state='low_city'))
-def lowprice_button_callback(call):
+def lowprice_button_callback(call: CallbackQuery) -> None:
     button_callback(call, LowPriceState, 'lowprice')
 
 
 @bot.callback_query_handler(func=None, search_config=for_search.filter(state='low_start_date'))
-def lowprice_callback_start_date(call):
+def lowprice_callback_start_date(call: CallbackQuery) -> None:
     callback_start_date(call, LowPriceState, "lowprice")
 
 
 @bot.callback_query_handler(func=None, search_config=for_search.filter(state='low_end_date'))
-def lowprice_callback_end_date(call):
+def lowprice_callback_end_date(call: CallbackQuery) -> None:
     callback_end_date(call, LowPriceState)
 
 
-@bot.message_handler(state=LowPriceState.count_hotels, is_digit=True, count_digit=True, )
-def get_photo_info(message: Message) -> None:
-    """
-    Запрос фотографий отелей. Запись количества отелей
-    """
-    logger.info(f'user_id {message.from_user.id}')
-    bot.set_state(message.from_user.id, LowPriceState.photo, message.chat.id)
-    bot.send_message(message.chat.id, f'Буду выводить {message.text} отелей')
-    bot.send_message(message.chat.id, f'Нужны фото отелей?',
-                     reply_markup=create_photo_keyboard(state='low_photo'))
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        data['count_hotels'] = message.text
+@bot.message_handler(state=LowPriceState.count_hotels, is_digit=True, count_digit=True)
+def lowprice_get_info(message: Message ) -> None:
+    handle_photo_info(message, LowPriceState, "low_photo")
 
 
 @bot.callback_query_handler(func=None, is_photo=for_photo.filter(photo='False', state='low_photo'))
-def not_photo(call: CallbackQuery) -> None:
-    logger.info(f'user_id {call.from_user.id}')
-    bot.edit_message_text(f'Вывожу результаты', call.message.chat.id, call.message.id)
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        data['photo'] = ''
-    user_is_ready(call.message, call.from_user.id, call.message.chat.id)
+def lowprice_not_photo(call: CallbackQuery) -> None:
+    not_photo(call, func=user_is_ready)
 
 
 @bot.callback_query_handler(func=None, is_photo=for_photo.filter(photo='True', state='low_photo'))
-def get_photo_count_info(call: CallbackQuery) -> None:
-    """
-    Запрос количества фотографий отелей. Запись необходимости фото
-    """
-    logger.info(f'user_id {call.from_user.id}')
-    bot.edit_message_text('Сколько фото выводить?(Не более 10)', call.message.chat.id, call.message.id)
-    bot.set_state(call.from_user.id, LowPriceState.count_photo, call.message.chat.id)
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        data['photo'] = True
+def lowprice_get_count_info(call: CallbackQuery) -> None:
+    get_count_info(call, LowPriceState)
 
 
 @bot.message_handler(state=LowPriceState.count_photo, is_digit=True, count_digit=True)

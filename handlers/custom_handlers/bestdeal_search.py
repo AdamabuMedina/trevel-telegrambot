@@ -2,6 +2,7 @@ from datetime import date
 from telebot.types import InputMediaPhoto, Message, CallbackQuery
 from handlers.custom_handlers.search_utils.button_callback import button_callback, callback_end_date, callback_start_date
 from handlers.custom_handlers.search_utils.get_cities_request import get_cities_request
+from handlers.custom_handlers.search_utils.handle_info import get_count_info, handle_photo_info, not_photo
 
 from utils.logger import logger
 from loader import bot
@@ -44,48 +45,18 @@ def bestdeal_callback_end_date(call):
 
 
 @bot.message_handler(state=BestDealState.count_hotels, is_digit=True, count_digit=True, )
-def get_photo_info(message: Message) -> None:
-    """
-    Запрос фотографий отелей. Запись количества отелей
-    :param message: Количество отелей
-    :return:None
-    """
-    logger.info(f'user_id {message.from_user.id}')
-    bot.send_message(message.chat.id, f'Буду выводить {message.text} отелей')
-    bot.send_message(message.chat.id, f'Нужны фото отелей?',
-                     reply_markup=create_photo_keyboard(state='best_state'))
-    bot.set_state(message.from_user.id, BestDealState.photo, message.chat.id)
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        logger.info(f'user_id {message.from_user.id} {message.text}')
-        data['count_hotels'] = message.text
+def bestdeal_get_info(message: Message) -> None:
+    handle_photo_info(message, BestDealState, "best_state")
 
 
 @bot.callback_query_handler(func=None, is_photo=for_photo.filter(photo='False', state='best_state'))
-def not_photo(call: CallbackQuery) -> None:
-    """
-    :param call: Обработчик кнопки "фото не нужно"
-    :return: None
-    """
-    logger.info(f'user_id {call.from_user.id}')
-    bot.edit_message_text(f'Введите минимальную цену за ночь', call.message.chat.id, call.message.id)
-    bot.set_state(call.from_user.id, BestDealState.min_price, call.message.chat.id)
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        logger.info(f'user_id {call.from_user.id}')
-        data['photo'] = ''
+def bestdeal_not_photo(call: CallbackQuery) -> None:
+    not_photo(call, state=BestDealState)
 
 
 @bot.callback_query_handler(func=None, is_photo=for_photo.filter(photo='True', state='best_state'))
-def get_photo_count_info(call: CallbackQuery) -> None:
-    """
-    Запрос количества фотографий отелей. Запись необходимости фото
-    :return: None
-    """
-    logger.info(f'user_id {call.from_user.id}')
-    bot.edit_message_text('Сколько фото выводить?(Не более 10)', call.message.chat.id, call.message.id)
-    bot.set_state(call.from_user.id, BestDealState.count_photo, call.message.chat.id)
-    with bot.retrieve_data(call.from_user.id, call.message.chat.id) as data:
-        logger.info(f'user_id {call.from_user.id}')
-        data['photo'] = True
+def bestdeal_get_count_info(call: CallbackQuery) -> None:
+    get_count_info(call, BestDealState)
 
 
 @bot.message_handler(state=BestDealState.count_photo, is_digit=True, count_digit=True)
